@@ -75,7 +75,7 @@ func main() {
 }
 ```
 
-### Unarshal
+### Unmarshal
 ```go
 func Unmarshal(data string, v interface{}) error
 ```
