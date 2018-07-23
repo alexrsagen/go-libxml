@@ -89,6 +89,9 @@ func setContentFromStructField(doc *xml.XmlDocument, t reflect.Type, s reflect.V
 	case reflect.Ptr:
 		return setContentFromStructField(doc, t.Elem(), s.Elem(), n)
 	case reflect.Interface:
+		if reflect.DeepEqual(s.Interface(), reflect.Zero(t).Interface()) {
+			return nil
+		}
 		return setContentFromStructField(doc, s.Elem().Type(), s.Elem(), n)
 	case reflect.Struct:
 		return fillNodeFromStruct(doc, n, s)
