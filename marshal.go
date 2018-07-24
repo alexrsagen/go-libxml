@@ -15,6 +15,7 @@ const nsCleanParseOption = xml.XML_PARSE_RECOVER |
 	xml.XML_PARSE_NOWARNING |
 	xml.XML_PARSE_NSCLEAN
 
+// ErrNoRoot is thrown when no root XMLName field is found
 var ErrNoRoot = errors.New("XMLName not defined on root element")
 
 // Marshal returns the XML encoding of v.¨
@@ -58,12 +59,15 @@ func Marshal(v interface{}) (string, error) {
 	}
 
 	// Clean up namespaces
-	cleanDoc, err := xml.Parse([]byte(doc.String()), []byte("UTF-8"), []byte{}, nsCleanParseOption, []byte("UTF-8"))
+	dirtyDoc, _ := doc.SerializeWithFormat(xml.XML_SAVE_AS_XML, []byte("UTF-8"), nil)
+	cleanDoc, err := xml.Parse(dirtyDoc, []byte("UTF-8"), []byte{}, nsCleanParseOption, []byte("UTF-8"))
 	if err != nil {
 		return "", err
 	}
 
-	return cleanDoc.String(), nil
+	// Serialize and return output
+	out, _ := cleanDoc.SerializeWithFormat(xml.XML_SAVE_AS_XML, []byte("UTF-8"), nil)
+	return string(out), nil
 }
 
 func getStringFromVal(t reflect.Type, s reflect.Value) (string, error) {
