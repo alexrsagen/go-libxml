@@ -88,15 +88,15 @@ func getStringFromVal(t reflect.Type, s reflect.Value) (string, error) {
 	return "", fmt.Errorf("Type %s (%s) not implemented", t.Kind().String(), t.String())
 }
 
-func setContentFromStructField(doc *xml.XmlDocument, t reflect.Type, s reflect.Value, n xml.Node) error {
+func setContentFromStructField(doc *xml.XmlDocument, t reflect.Type, s reflect.Value, n xml.Node, cdata bool) error {
 	switch t.Kind() {
 	case reflect.Ptr:
-		return setContentFromStructField(doc, t.Elem(), s.Elem(), n)
+		return setContentFromStructField(doc, t.Elem(), s.Elem(), n, false)
 	case reflect.Interface:
 		if reflect.DeepEqual(s.Interface(), reflect.Zero(t).Interface()) {
 			return nil
 		}
-		return setContentFromStructField(doc, s.Elem().Type(), s.Elem(), n)
+		return setContentFromStructField(doc, s.Elem().Type(), s.Elem(), n, false)
 	case reflect.Struct:
 		return fillNodeFromStruct(doc, n, s)
 	default:
@@ -104,7 +104,12 @@ func setContentFromStructField(doc *xml.XmlDocument, t reflect.Type, s reflect.V
 		if err != nil {
 			return err
 		}
-		n.SetContent(str)
+		if cdata {
+			cdataNode := doc.CreateCDataNode(str)
+			n.AddChild(cdataNode)
+		} else {
+			n.SetContent(str)
+		}
 	}
 	return nil
 }
@@ -137,17 +142,20 @@ func fillNodeFromStruct(doc *xml.XmlDocument, n xml.Node, s reflect.Value) error
 		tagNS := ""
 		fullTagName := ""
 		isAttr := false
+		isCDATA := false
 		if xmlTag := parseXMLTag(tField.Tag); xmlTag != nil {
 			if reflect.DeepEqual(sField.Interface(), reflect.Zero(tField.Type).Interface()) && xmlTag.flagOmitEmpty {
 				continue
 			} else if xmlTag.flagAttribute {
 				isAttr = true
 			} else if xmlTag.flagChardata {
-				err := setContentFromStructField(doc, tField.Type, sField, n)
+				err := setContentFromStructField(doc, tField.Type, sField, n, false)
 				if err != nil {
 					return err
 				}
 				continue
+			} else if xmlTag.flagCDATA {
+				isCDATA = true
 			}
 			fullTagName = xmlTag.tagName
 			tagNS = xmlTag.namespace
@@ -179,7 +187,7 @@ func fillNodeFromStruct(doc *xml.XmlDocument, n xml.Node, s reflect.Value) error
 					if tagNS != "" {
 						node.SetNamespace(prefix, tagNS)
 					}
-					err := setContentFromStructField(doc, sField.Type().Elem(), sField.Index(i), node)
+					err := setContentFromStructField(doc, sField.Type().Elem(), sField.Index(i), node, false)
 					if err != nil {
 						return err
 					}
@@ -190,7 +198,7 @@ func fillNodeFromStruct(doc *xml.XmlDocument, n xml.Node, s reflect.Value) error
 				if tagNS != "" {
 					node.SetNamespace(prefix, tagNS)
 				}
-				err := setContentFromStructField(doc, tField.Type, sField, node)
+				err := setContentFromStructField(doc, tField.Type, sField, node, isCDATA)
 				if err != nil {
 					return err
 				}

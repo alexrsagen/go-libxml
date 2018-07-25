@@ -14,7 +14,6 @@ Thanks to [moovweb](https://github.com/moovweb/gokogiri) for the libxml wrapper,
 ## Known bugs/missing features
 - Marshal/Unmarshal of array types (fixed-length slices)
 - Element nesting using `>` operator. Example struct tag that would fail: `xml:"name>first"`.
-- CDATA content handling
 - `,innerxml` flag handling in Marshal
 - `,comment` flag handling
 - `,any` flag handling

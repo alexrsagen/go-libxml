@@ -158,6 +158,7 @@ func fillStructFromNode(n xml.Node, s reflect.Value) error {
 		// Get XML tag name and namespace from struct definition
 		tagNS := ""
 		tagName := ""
+		isCDATA := false
 		if xmlTag := parseXMLTag(tField.Tag); xmlTag != nil {
 			// Handle special struct tag flags
 			if xmlTag.flagInnerXML {
@@ -177,6 +178,8 @@ func fillStructFromNode(n xml.Node, s reflect.Value) error {
 					sField.SetBytes([]byte(n.Content()))
 				}
 				continue
+			} else if xmlTag.flagCDATA {
+				isCDATA = true
 			}
 			tagName = xmlTag.tagName
 			tagNS = xmlTag.namespace
@@ -200,6 +203,14 @@ func fillStructFromNode(n xml.Node, s reflect.Value) error {
 		// Loop over child elements to find value(s) for current struct field
 		docf := xml.DocumentFragment{Node: n}
 		for _, c := range docf.Children() {
+			if isCDATA && c.NodeType() == xml.XML_CDATA_SECTION_NODE {
+				if tField.Type.Kind() == reflect.String {
+					sField.SetString(c.Content())
+				} else if tField.Type.Kind() == reflect.Slice && tField.Type.Elem().Kind() == reflect.Uint8 {
+					sField.SetBytes([]byte(c.Content()))
+				}
+				break
+			}
 			if c.Name() == tagName && (tagNS == "" || c.Namespace() == tagNS) {
 				if tField.Type.Kind() == reflect.Slice {
 					// Handle slice fields
